@@ -33,52 +33,39 @@ def detect_face(face_file, max_results=1):
 
 def crop_faces(image, faces, output_filename):
     im = Image.open(image)
+    im_width, im_height = im.size
 
-    im_width = im.size[0]
-    im_height = im.size[1]
-
-    left = 0
-    right = 0
-    top = 0
-    bottom = 0
+    left = right = top = bottom = 0
+    max_area = 0  
 
     for face in faces:
         box = [(vertex.x, vertex.y) for vertex in face.bounding_poly.vertices]
-        
-    centre = int((box[0][0] + box[1][0])/2)
-    middle = int((box[0][1] + box[2][1])/2)
-    width = abs(box[1][0] - box[0][0]) + (0.1 * im_width)
-    height = abs(box[2][1] - box [0][1]) + (0.1 * im_height)
+        width = abs(box[1][0] - box[0][0])
+        height = abs(box[2][1] - box[0][1])
+        area = width * height
 
-    if (max(width, height) < im_width) & (max(width, height) < im_height):
-        distance = int(max(width, height)/2)
-    elif (min(width, height) < im_width) & (min(width, height) < im_height):
-        distance = int(min(width, height)/2)
+        if area > max_area:
+            max_area = area
+            largest_box = box  
+
+    
+    centre = int((largest_box[0][0] + largest_box[1][0]) / 2)
+    middle = int((largest_box[0][1] + largest_box[2][1]) / 2)
+    width = abs(largest_box[1][0] - largest_box[0][0]) + (0.1 * im_width)
+    height = abs(largest_box[2][1] - largest_box[0][1]) + (0.1 * im_height)
+
+    if max(width, height) < min(im_width, im_height):
+        distance = int(max(width, height) / 2)
     else:
-        distance = int(min(im_width, im_height)/2)
+        distance = int(min(im_width, im_height) / 2)
     
-    left = centre - distance
-    right = centre + distance
-    top = middle - distance
-    bottom = middle + distance
+    left = max(0, centre - distance)
+    right = min(im_width, centre + distance)
+    top = max(0, middle - distance)
+    bottom = min(im_height, middle + distance)
 
-    if left < 0:
-        right -= left
-        left = 0
-    
-    if right > im_width:
-        left -= (right - im_width)
-        right = im_width
-    
-    if top < 0:
-        bottom -= top
-        top = 0
-    
-    if bottom > im_height:
-        top -= (bottom - im_height)
-        bottom = im_height
-
-    box2 = (left,top,right,bottom)
-    new_im = im.crop(box2)
-    new_im = new_im.resize((200,200), Image.ANTIALIAS)
+   
+    new_im = im.crop((left, top, right, bottom))
+    new_im = new_im.resize((200, 200), Image.ANTIALIAS)
     new_im.save(output_filename)
+
